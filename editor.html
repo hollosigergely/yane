@@ -1,0 +1,74 @@
+<html>
+<head>
+    <script src="https://unpkg.com/mystjs"></script>
+    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+    <script src="https://unpkg.com/isomorphic-git@beta"></script>
+    <script src="https://unpkg.com/isomorphic-git/http/web/index.umd.js"></script>
+
+    <script>
+        var myst;
+
+        async function init() {
+            window.fs = new LightningFS('fs')
+            window.pfs = fs.promises
+
+            window.dir = '/tutorial'
+            console.log(dir);
+            try {
+                await pfs.mkdir(dir);
+            } catch(e)
+            {
+                console.log(e);
+            }
+
+            await git.clone({
+                fs,
+                http: GitHttp,
+                dir,
+                corsProxy: 'https://cors.isomorphic-git.org',
+                url: 'https://github.com/hollosigergely/yane_test_repo.git',
+                ref: 'master',
+                singleBranch: true,
+                depth: 10
+            });
+            await pfs.readdir(dir);
+            console.log(await git.log({fs, dir}))
+
+            files = await pfs.readdir(dir)
+            console.log("Files: " + files)
+
+            const main_select = document.getElementById('main_chapters')
+            files.forEach(element => {
+                if(!element.startsWith('.'))
+                {
+                    var option = document.createElement("option");
+                    option.text = element;
+                    main_select.add(option);
+                }
+            });
+
+            myst = new MyST();
+        }
+
+        function render() {
+            const html = myst.render(document.getElementById('main_editor').value);
+            document.getElementById('rendered').innerHTML = html;
+        }
+
+        async function select_changed() {
+            selected = document.getElementById('main_chapters').value;
+            console.log('open ' + dir + '/' + selected);
+
+            content = await pfs.readFile(dir + '/' + selected, 'utf8');
+            document.getElementById('main_editor').value = content;
+            render();
+        }
+      </script>
+</head>
+<body onload="init();">
+    <select id="main_chapters" size="5" onchange="select_changed();">
+    </select>
+    <textarea id="main_editor" name="Text1" cols="80" rows="30" oninput="render();"></textarea>
+    <div id="rendered"></div>
+</body>
+</html>
